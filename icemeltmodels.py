@@ -33,7 +33,7 @@ class MeltModel():
 
 
 class TwoEquationMeltModelNeglectingConduction(MeltModel):
-    def __init__(self, transfer_coefficient=5.9e-04, **kwargs):
+    def __init__(self, transfer_coefficient=5.909314681e-04, **kwargs):
         super().__init__(**kwargs)
         self.transfer_coefficient = transfer_coefficient
 
@@ -74,7 +74,7 @@ class TwoEquationMeltModelNeglectingConduction(MeltModel):
     
 
 class TwoEquationMeltModel(MeltModel):
-    def __init__(self, transfer_coefficient=5.9e-04, ice_temperature=-10, **kwargs):
+    def __init__(self, transfer_coefficient=5.909314681e-04, ice_temperature=-10, **kwargs):
         super().__init__(**kwargs)
         self.transfer_coefficient = transfer_coefficient
         self.ice_temperature = ice_temperature
@@ -120,7 +120,7 @@ class TwoEquationMeltModel(MeltModel):
     
 
 class ThreeEquationMeltModelNeglectingConduction(MeltModel):
-    def __init__(self, heat_transfer_coefficient=1.1e-02, salt_transfer_coefficient=3.1e-05, **kwargs):
+    def __init__(self, heat_transfer_coefficient=1.083374358e-03, salt_transfer_coefficient=3.053145919e-05, **kwargs):
         super().__init__(**kwargs)
         self.heat_transfer_coefficient = heat_transfer_coefficient
         self.salt_transfer_coefficient = salt_transfer_coefficient
@@ -163,7 +163,7 @@ class ThreeEquationMeltModelNeglectingConduction(MeltModel):
 
 
 class ThreeEquationMeltModel(MeltModel):
-    def __init__(self, heat_transfer_coefficient=1.1e-02, salt_transfer_coefficient=3.1e-05, ice_temperature=-10, **kwargs):
+    def __init__(self, heat_transfer_coefficient=1.083374358e-03, salt_transfer_coefficient=3.053145919e-05, ice_temperature=-10, **kwargs):
         super().__init__(**kwargs)
         self.heat_transfer_coefficient = heat_transfer_coefficient
         self.salt_transfer_coefficient = salt_transfer_coefficient
@@ -198,7 +198,7 @@ class ThreeEquationMeltModel(MeltModel):
             The melt rate predicted by this model.
         """
         # Solve quadratic equation for the melt rate.
-        alpha = (self.density_water / self.density_ice) * self.heat_transfer_coefficient * current_speed
+        alpha = (self.density_water / self.density_ice) * self.salt_transfer_coefficient * current_speed
         beta = self.density_water * self.heat_capacity_water * self.heat_transfer_coefficient * current_speed
         gamma = self.density_ice * (self.latent_heat_ice - self.heat_capacity_ice * self.ice_temperature)
         delta = self.density_ice * self.heat_capacity_ice

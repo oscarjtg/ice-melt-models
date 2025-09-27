@@ -31,6 +31,29 @@ class MeltModel():
         self.liquidus_intercept = liquidus_intercept
         self.liquidus_pressure_coefficient = liquidus_pressure_coefficient
 
+    def freezing_temperature(self, current_speed, temperature, salinity, pressure):
+        """
+        Calculates the seawater freezing point temperature according to the 
+        linear equation of state from Jenkins et al (2010).
+
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s. (Not used)
+
+            temperature:   The temperature of the ocean water, in degrees Celsius. (Not used)
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+        
+        Returns:
+            The freezing temperature predicted by this model.
+        """
+        # The seawater freezing temperature at the given ambient salinity and pressure.
+        freezing_temperature = self.liquidus_slope * salinity + self.liquidus_intercept + self.liquidus_pressure_coefficient * pressure
+        return freezing_temperature
+
 
 class TwoEquationMeltModelNeglectingConduction(MeltModel):
     def __init__(self, transfer_coefficient=5.909314681e-04, **kwargs):
@@ -63,8 +86,8 @@ class TwoEquationMeltModelNeglectingConduction(MeltModel):
         Returns:
             The melt rate predicted by this model.
         """
-        # The seawater freezing temperature at the given temperature, salinity, and pressure.
-        freezing_temperature = self.liquidus_slope * salinity + self.liquidus_intercept + self.liquidus_pressure_coefficient * pressure
+        # The seawater freezing temperature at the given ambient salinity and pressure.
+        freezing_temperature = self.freezing_temperature(current_speed, temperature, salinity, pressure)
 
         # The constant of proportionality.
         constant = (self.density_water / self.density_ice) * (self.heat_capacity_water / self.latent_heat_ice) * self.transfer_coefficient
@@ -73,10 +96,9 @@ class TwoEquationMeltModelNeglectingConduction(MeltModel):
         return constant * current_speed * (temperature - freezing_temperature)
     
 
-class TwoEquationMeltModel(MeltModel):
-    def __init__(self, transfer_coefficient=5.909314681e-04, ice_temperature=-10, **kwargs):
+class TwoEquationMeltModel(TwoEquationMeltModelNeglectingConduction):
+    def __init__(self, ice_temperature=-10, **kwargs):
         super().__init__(**kwargs)
-        self.transfer_coefficient = transfer_coefficient
         self.ice_temperature = ice_temperature
 
     def melt_rate(self, current_speed, temperature, salinity, pressure):
@@ -107,8 +129,8 @@ class TwoEquationMeltModel(MeltModel):
         Returns:
             The melt rate predicted by this model.
         """
-        # The seawater freezing temperature at the given temperature, salinity, and pressure.
-        freezing_temperature = self.liquidus_slope * salinity + self.liquidus_intercept + self.liquidus_pressure_coefficient * pressure
+        # The seawater freezing temperature at the given ambient salinity and pressure.
+        freezing_temperature = self.freezing_temperature(current_speed, temperature, salinity, pressure)
 
         # The constant of proportionality.
         numerator = self.density_water * self.heat_capacity_water * self.transfer_coefficient
@@ -160,13 +182,61 @@ class ThreeEquationMeltModelNeglectingConduction(MeltModel):
         # Quadratic formula.
         melt_rate = (-b + np.sqrt(b * b - 4 * a * c)) / (2 * a)
         return melt_rate
+    
+    def boundary_salinity(self, current_speed, temperature, salinity, pressure):
+        """
+        Calculates the salinity at the ice-ocean boundary according to the 
+        three equation melt model from Jenkins et al (2010), 
+        neglecting conductive heat flux into the ice.
 
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s.
 
-class ThreeEquationMeltModel(MeltModel):
-    def __init__(self, heat_transfer_coefficient=1.083374358e-03, salt_transfer_coefficient=3.053145919e-05, ice_temperature=-10, **kwargs):
+            temperature:   The temperature of the ocean water, in degrees Celsius.
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+
+        Returns:
+            The salinity at the ice-ocean boundary.
+        """
+        melt_rate = self.melt_rate(current_speed, temperature, salinity, pressure)
+        numerator = self.density_water * self.salt_transfer_coefficient * current_speed
+        denominator = self.density_ice * melt_rate + numerator
+        constant = np.where(denominator == 0.0, np.nan, numerator / denominator)
+
+        return constant * salinity
+    
+    def boundary_temperature(self, current_speed, temperature, salinity, pressure):
+        """
+        Calculates the temperature at the ice-ocean boundary according to the 
+        three equation melt model from Jenkins et al (2010), 
+        neglecting conductive heat flux into the ice.
+
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s.
+
+            temperature:   The temperature of the ocean water, in degrees Celsius.
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+
+        Returns:
+            The temperature at the ice-ocean boundary.
+        """
+        boundary_salinity = self.boundary_salinity(current_speed, temperature, salinity, pressure)
+
+        return self.freezing_temperature(current_speed, temperature, boundary_salinity, pressure)
+
+class ThreeEquationMeltModel(ThreeEquationMeltModelNeglectingConduction):
+    def __init__(self, ice_temperature=-10, **kwargs):
         super().__init__(**kwargs)
-        self.heat_transfer_coefficient = heat_transfer_coefficient
-        self.salt_transfer_coefficient = salt_transfer_coefficient
         self.ice_temperature = ice_temperature
 
     def melt_rate(self, current_speed, temperature, salinity, pressure):

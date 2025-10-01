@@ -282,4 +282,39 @@ class ThreeEquationMeltModel(ThreeEquationMeltModelNeglectingConduction):
         # Quadratic formula.
         melt_rate = (-b + np.sqrt(b * b - 4 * a * c)) / (2 * a)
         return melt_rate
+    
+    def boundary_salinity_direct_solve(self, current_speed, temperature, salinity, pressure):
+        """
+        Solves a quadratic equation for the boundary salinity found by eliminating 
+        the melt rate and the boundary temperature from the Three Equation melt model
+        in Jenkins et al. (2010)
+        
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s.
+
+            temperature:   The temperature of the ocean water, in degrees Celsius.
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+
+        Returns:
+            The boundary salinity predicted by this model.
+        """
+        alpha = self.latent_heat_ice * self.salt_transfer_coefficient
+        beta = self.heat_capacity_water * self.heat_transfer_coefficient
+        gamma = self.heat_capacity_ice * self.salt_transfer_coefficient
+        delta = temperature - self.liquidus_intercept - self.liquidus_pressure_coefficient * pressure 
+        epsilon = self.ice_temperature - self.liquidus_intercept - self.liquidus_pressure_coefficient * pressure
+
+        # Coefficients of quadratic equation.
+        a = (gamma - beta) * self.liquidus_slope  # in m^2 s^-2 (g/kg)^-1
+        b = alpha + beta * delta - gamma * (epsilon + self.liquidus_slope * salinity) # in m^2 s^-2
+        c = (gamma * epsilon - alpha) * salinity # in m^2 s^-2 g/kg
+
+        # Solve quadratic equation. Return the positive root.
+        boundary_salinity = (-b + np.sqrt(b * b - 4 * a * c)) / (2 * a) # in g/kg
+        return boundary_salinity
         

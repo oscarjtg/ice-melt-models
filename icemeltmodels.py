@@ -238,7 +238,7 @@ class ThreeEquationMeltModel(ThreeEquationMeltModelNeglectingConduction):
     def __init__(self, ice_temperature=-10, **kwargs):
         super().__init__(**kwargs)
         self.ice_temperature = ice_temperature
-
+    
     def melt_rate(self, current_speed, temperature, salinity, pressure):
         """
         Calculates the melt rate according to the three equation melt model 
@@ -267,19 +267,83 @@ class ThreeEquationMeltModel(ThreeEquationMeltModelNeglectingConduction):
         Returns:
             The melt rate predicted by this model.
         """
-        # Solve quadratic equation for the melt rate.
-        alpha = (self.density_water / self.density_ice) * self.salt_transfer_coefficient * current_speed
-        beta = self.density_water * self.heat_capacity_water * self.heat_transfer_coefficient * current_speed
-        gamma = self.density_ice * (self.latent_heat_ice - self.heat_capacity_ice * self.ice_temperature)
-        delta = self.density_ice * self.heat_capacity_ice
-        epsilon = self.liquidus_intercept + self.liquidus_pressure_coefficient * pressure
+        rho_w = self.density_water
+        rho_i = self.density_ice
+        c_w = self.heat_capacity_water
+        c_i = self.heat_capacity_ice
+        L_i = self.latent_heat_ice
+        T_i = self.ice_temperature
+
+        gamma_T = self.heat_transfer_coefficient
+        gamma_S = self.salt_transfer_coefficient
+        
+        lambda_1 = self.liquidus_slope
+        lambda_2 = self.liquidus_intercept
+        lambda_3 = self.liquidus_pressure_coefficient
+
+        U = current_speed # Not used here, since S_b is independent of U.
+        T_w = temperature
+        S_w = salinity
+        P_b = pressure
         
         # Coefficients of the quadratic (a, b, and c).
-        a = gamma + delta * epsilon
-        b = alpha * gamma - beta * temperature + alpha * delta * self.liquidus_slope * salinity + alpha * delta * epsilon + beta * epsilon
-        c = -alpha * beta * temperature + alpha * beta * self.liquidus_slope * salinity + alpha * beta * epsilon
+        a = (L_i - c_i * (T_i - lambda_2 - lambda_3 * P_b)) * rho_i**2
+        b = (gamma_S * L_i 
+             + gamma_S * c_i * (lambda_1 * S_w + lambda_2 + lambda_3 * P_b - T_i)
+             - gamma_T * c_w * (T_w - lambda_2 - lambda_3 * P_b)
+             ) * rho_w * rho_i * U
+        c = (lambda_1 * S_w + lambda_2 + lambda_3 * P_b - T_w) * gamma_T * gamma_S * rho_w**2 * c_w * U**2
 
         # Quadratic formula.
-        melt_rate = (-b + np.sqrt(b * b - 4 * a * c)) / (2 * a)
+        melt_rate = (-b + np.sqrt(b**2 - 4 * a * c)) / (2 * a)
         return melt_rate
+    
+    def boundary_salinity(self, current_speed, temperature, salinity, pressure):
+        """
+        Solves a quadratic equation for the boundary salinity found by eliminating 
+        the melt rate and the boundary temperature from the Three Equation melt model
+        in Jenkins et al. (2010)
+        
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s.
+
+            temperature:   The temperature of the ocean water, in degrees Celsius.
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+
+        Returns:
+            The boundary salinity predicted by this model.
+        """
+        c_w = self.heat_capacity_water
+        c_i = self.heat_capacity_ice
+        L_i = self.latent_heat_ice
+        T_i = self.ice_temperature
+
+        gamma_T = self.heat_transfer_coefficient
+        gamma_S = self.salt_transfer_coefficient
+        
+        lambda_1 = self.liquidus_slope
+        lambda_2 = self.liquidus_intercept
+        lambda_3 = self.liquidus_pressure_coefficient
+
+        U = current_speed # Not used here, since S_b is independent of U.
+        T_w = temperature
+        S_w = salinity
+        P_b = pressure
+
+        # Coefficients of quadratic equation.
+        a = (gamma_S * c_i - gamma_T * c_w) * lambda_1  # in m^2 s^-2 (g/kg)^-1
+        b = (gamma_S * L_i 
+             + gamma_T * c_w * (T_w - lambda_2 - lambda_3 * P_b)
+             - gamma_S * c_i * (lambda_1 * S_w + T_i - lambda_2 - lambda_3 * P_b) # in m^2 s^-2
+        )
+        c = (c_i * (T_i - lambda_2 - lambda_3 * P_b) - L_i) * gamma_S * S_w # in m^2 s^-2 g/kg
+
+        # Solve quadratic equation. Return the positive root.
+        boundary_salinity = (-b + np.sqrt(b ** 2 - 4 * a * c)) / (2 * a) # in g/kg
+        return boundary_salinity * (U / U) # * (U / U) is to have array shape of U.
         

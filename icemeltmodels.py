@@ -53,6 +53,32 @@ class MeltModel():
         # The seawater freezing temperature at the given ambient salinity and pressure.
         freezing_temperature = self.liquidus_slope * salinity + self.liquidus_intercept + self.liquidus_pressure_coefficient * pressure
         return freezing_temperature
+    
+    def latent_heat_release(self, current_speed, temperature, salinity, pressure):
+        """
+        Calculates the latent heat release, rho_i * L_i * m_dot
+
+        where rho_i is the density of ice,
+        L_i is the latent heat of ice,
+        and m_dot is the melt rate.
+
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s. (Not used)
+
+            temperature:   The temperature of the ocean water, in degrees Celsius. (Not used)
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+        
+        Returns:
+            The latent heat released.
+        """
+        melt_rate = self.melt_rate(current_speed, temperature, salinity, pressure)
+        return self.density_ice * self.latent_heat_ice * melt_rate
+
 
 
 class TwoEquationMeltModelNeglectingConduction(MeltModel):
@@ -94,6 +120,37 @@ class TwoEquationMeltModelNeglectingConduction(MeltModel):
 
         # Return the melt rate.
         return constant * current_speed * (temperature - freezing_temperature)
+    
+    def ocean_heat_flux(self, current_speed, temperature, salinity, pressure):
+        """
+        Computes the ocean heat flux in the two equation model,
+
+        F_o = rho_w c_w gamma_{TS} U (T_w - T_f),
+
+        where F_o is the ocean heat flux,
+        rho_w is the density of seawater,
+        c_w is the specific heat capacity of seawater,
+        gamma_{TS} is a turbulent transfer coefficient,
+        U is the resolved ice-adjacent free-stream ocean current speed,
+        T_w is the resolved ice-adjacent ambient ocean temperature,
+        and T_f is the ocean freezing point temperature.
+        
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s.
+
+            temperature:   The temperature of the ocean water, in degrees Celsius.
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+
+        Returns:
+            The ocean heat flux predicted by this model.
+        """
+        freezing_temperature = self.freezing_temperature(current_speed, temperature, salinity, pressure)
+        return self.density_water * self.heat_capacity_water * self.transfer_coefficient * current_speed * (temperature - freezing_temperature)
     
 
 class TwoEquationMeltModel(TwoEquationMeltModelNeglectingConduction):
@@ -139,6 +196,39 @@ class TwoEquationMeltModel(TwoEquationMeltModelNeglectingConduction):
 
         # Return the melt rate.
         return constant * current_speed * (temperature - freezing_temperature)
+    
+    def ice_heat_flux(self, current_speed, temperature, salinity, pressure):
+        """
+        Computes the ice heat flux in the two equation model,
+
+        F_i = rho_i c_i (T_i - T_f) m_dot,
+
+        where F_i is the ice heat flux,
+        rho_i is the density of ice,
+        c_i is the specific heat capacity of ice,
+        T_i is the far-field ice temperature,
+        T_f is the ocean freezing temperature, 
+        and m_dot is the melt rate.
+        
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s.
+
+            temperature:   The temperature of the ocean water, in degrees Celsius.
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+
+        Returns:
+            The ice heat flux predicted by this model.
+        """
+        freezing_temperature = self.freezing_temperature(current_speed, temperature, salinity, pressure)
+        melt_rate = self.melt_rate(current_speed, temperature, salinity, pressure)
+        return self.density_ice * self.heat_capacity_ice * (
+            self.ice_temperature - freezing_temperature
+            ) * melt_rate
     
 
 class ThreeEquationMeltModelNeglectingConduction(MeltModel):
@@ -203,6 +293,7 @@ class ThreeEquationMeltModelNeglectingConduction(MeltModel):
         Returns:
             The salinity at the ice-ocean boundary.
         """
+        print("Using ThreeEquationMeltModelNeglectingConduction boundary_salinity()")
         melt_rate = self.melt_rate(current_speed, temperature, salinity, pressure)
         numerator = self.density_water * self.salt_transfer_coefficient * current_speed
         denominator = self.density_ice * melt_rate + numerator
@@ -233,6 +324,100 @@ class ThreeEquationMeltModelNeglectingConduction(MeltModel):
         boundary_salinity = self.boundary_salinity(current_speed, temperature, salinity, pressure)
 
         return self.freezing_temperature(current_speed, temperature, boundary_salinity, pressure)
+    
+    def ocean_heat_flux(self, current_speed, temperature, salinity, pressure):
+        """
+        Computes the ocean heat flux in the three equation model,
+
+        F_o = rho_w c_w gamma_T U (T_w - T_b),
+
+        where F_o is the ocean heat flux,
+        rho_w is the density of seawater,
+        c_w is the specific heat capacity of seawater,
+        gamma_T is a turbulent heat transfer coefficient,
+        U is the resolved ice-adjacent free-stream ocean current speed,
+        T_w is the resolved ice-adjacent ambient ocean temperature,
+        and T_b is the temperature at the ice-ocean boundary.
+        
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s.
+
+            temperature:   The temperature of the ocean water, in degrees Celsius.
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+
+        Returns:
+            The ocean heat flux predicted by this model.
+        """
+        print("ThreeEquationMeltModelNeglectingConduction ocean_heat_flux()")
+        boundary_temperature = self.boundary_temperature(current_speed, temperature, salinity, pressure)
+        return self.density_water * self.heat_capacity_water * self.heat_transfer_coefficient * current_speed * (temperature - boundary_temperature)
+    
+    def ice_salt_flux(self, current_speed, temperature, salinity, pressure):
+        """
+        Computes the ice salt flux in the three equation model.
+
+        F_si  = rho_i S_b m_dot
+
+        where F_si is the ice salt flux,
+        rho_i is the ice density,
+        S_b is the boundary salinity, 
+        and m_dot is the melt rate.
+
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s.
+
+            temperature:   The temperature of the ocean water, in degrees Celsius.
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+
+        Returns:
+            The ice salt flux predicted by this model.
+        """
+        melt_rate = self.melt_rate(current_speed, temperature, salinity, pressure)
+        boundary_salinity = self.boundary_salinity(current_speed, temperature, salinity, pressure)
+        return self.density_ice * boundary_salinity * melt_rate
+    
+    def ocean_salt_flux(self, current_speed, temperature, salinity, pressure):
+        """
+        Computes the ocean salt flux in the three equation model.
+
+        F_so  = rho_w gamma_S U (S_w - S_b)
+
+        where F_so is the ocean salt flux,
+        rho_w is the seawater density,
+        gamma_S is the turbulent salt transfer coefficient,
+        U is the resolved glacier-adjacent free-stream current speed,
+        S_w is the resolved glacier-adjacent salinity,
+        and S_b is the boundary salinity.
+
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s.
+
+            temperature:   The temperature of the ocean water, in degrees Celsius.
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+
+        Returns:
+            The ocean salt flux predicted by this model.
+        """
+        boundary_salinity = self.boundary_salinity(current_speed, temperature, salinity, pressure)
+        return self.density_water * self.salt_transfer_coefficient * current_speed * (
+            salinity - boundary_salinity
+        )
+
 
 class ThreeEquationMeltModel(ThreeEquationMeltModelNeglectingConduction):
     def __init__(self, ice_temperature=-10, **kwargs):
@@ -318,6 +503,7 @@ class ThreeEquationMeltModel(ThreeEquationMeltModelNeglectingConduction):
         Returns:
             The boundary salinity predicted by this model.
         """
+        print("Using ThreeEquationMeltModel boundary_salinity()")
         c_w = self.heat_capacity_water
         c_i = self.heat_capacity_ice
         L_i = self.latent_heat_ice
@@ -346,4 +532,39 @@ class ThreeEquationMeltModel(ThreeEquationMeltModelNeglectingConduction):
         # Solve quadratic equation. Return the positive root.
         boundary_salinity = (-b + np.sqrt(b ** 2 - 4 * a * c)) / (2 * a) # in g/kg
         return boundary_salinity * (U / U) # * (U / U) is to have array shape of U.
+    
+    def ice_heat_flux(self, current_speed, temperature, salinity, pressure):
+        """
+        Computes the ice heat flux in the three equation model,
+
+        F_i = rho_i c_i (T_i - T_b) m_dot,
+
+        where F_i is the ice heat flux,
+        rho_i is the density of ice,
+        c_i is the specific heat capacity of ice,
+        T_i is the far-field ice temperature,
+        T_b is the temperature at the ice-ocean boundary, 
+        and m_dot is the melt rate.
+        
+        Parameters:
+            current_speed: The magnitude of the velocity of the free-stream current
+                           adjacent to the ice interface but outside the turbulent 
+                           boundary layer, in m/s.
+
+            temperature:   The temperature of the ocean water, in degrees Celsius.
+
+            salinity:      The salinity of the ocean water, in g/kg.
+
+            pressure:      The pressure at that point, in Pa.
+
+        Returns:
+            The ice heat flux predicted by this model.
+        """
+        boundary_temperature = self.boundary_temperature(current_speed, temperature, salinity, pressure)
+        melt_rate = self.melt_rate(current_speed, temperature, salinity, pressure)
+        return self.density_ice * self.heat_capacity_ice * (
+            self.ice_temperature - boundary_temperature
+            ) * melt_rate
+    
+    
         

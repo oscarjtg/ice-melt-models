@@ -57,6 +57,5 @@ from icemeltmodels import ThreeEquationMeltModel
 ```
 
 ## TODO:
-* Implement ocean heat and salt flux calculations
-* Write tests
+* Write automated unit tests
 * Doxygen documentation

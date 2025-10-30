@@ -6,13 +6,13 @@ Ice melt models for interactions between ice sheets and polar oceans!
 
 Based on models presented in [Jenkins et al., (2010)](https://doi.org/10.1175/2010JPO4317.1).
 
-For explanations, see the Jupyter notebook located at `examples/melt_model_explanations.ipynb` which explains the motivation for this module and the origin of the melt models.
+Explanations of the melt models implemented in this module can be found in the Jupyter notebook located at `notebooks/melt_model_explanations.ipynb`.
 
 ## Installation instructions
 
 ### Method 1 (quick)
 
-Clone this repository, copy the file `icemeltmodel.py` into the directory with your Pythons scripts and import the module
+Clone this repository, copy the file `icemeltmodels.py` into the directory with your Pythons scripts and import the module
 ```python
 from icemeltmodels import ThreeEquationMeltModel
 
@@ -60,5 +60,5 @@ from icemeltmodels import ThreeEquationMeltModel
 ```
 
 ## TODO:
-* Write automated unit tests
-* Doxygen documentation
+* Expand the test suite
+* Write more documentation

@@ -1,4 +1,7 @@
 # ice-melt-models
+
+![CI](https://github.com/oscarjtg/ice-melt-models/actions/workflows/ci.yml/badge.svg)
+
 Ice melt models for interactions between ice sheets and polar oceans!
 
 Based on models presented in [Jenkins et al., (2010)](https://doi.org/10.1175/2010JPO4317.1).

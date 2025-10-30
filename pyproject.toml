@@ -24,3 +24,7 @@ license-files = ["LICENSE"]
 [project.urls]
 Homepage = "https://github.com/oscarjtg/ice-melt-models"
 Issues = "https://github.com/oscarjtg/ice-melt-models/issues"
+
+[tool.pytest.ini_options]
+addopts = "-q --cov=icemeltmodels --cov-report=term-missing"
+testpaths = ["tests"]

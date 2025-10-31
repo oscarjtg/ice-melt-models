@@ -9,7 +9,7 @@ dependencies = [
     "numpy>=1.21"
 ]
 authors = [
-  { name="Oscar Tovey Garcia", email="otoveyg@gmail.com" },
+  { name = "Oscar Tovey Garcia", email = "otoveyg@gmail.com" }
 ]
 description = "Python implementations of ice melt models for estimating the melt rate at an ice sheet-ocean interface."
 readme = "README.md"
@@ -24,6 +24,9 @@ license-files = ["LICENSE"]
 [project.urls]
 Homepage = "https://github.com/oscarjtg/ice-melt-models"
 Issues = "https://github.com/oscarjtg/ice-melt-models/issues"
+
+[tool.setuptools]
+py-modules = ["icemeltmodels"]
 
 [tool.pytest.ini_options]
 addopts = "-q --cov=icemeltmodels --cov-report=term-missing"

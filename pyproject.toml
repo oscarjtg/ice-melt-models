@@ -13,7 +13,7 @@ authors = [
 ]
 description = "Python implementations of ice melt models for estimating the melt rate at an ice sheet-ocean interface."
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Operating System :: OS Independent",

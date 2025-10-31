@@ -1,7 +1,9 @@
 import pytest
 import numpy as np
+
 np.random.seed(42)
 import icemeltmodels
+
 
 def test_three_equation_melt_model_melt_rate_zero_current_zero_melt():
     """Melt rate should be zero if there is no current (no heat transfer)."""
@@ -15,8 +17,9 @@ def test_three_equation_melt_model_melt_rate_zero_current_zero_melt():
     np.testing.assert_allclose(
         model.melt_rate(current_speed, temperature, salinity, pressure),
         np.zeros(N),
-        atol=1e-12
+        atol=1e-12,
     )
+
 
 def test_two_equation_melt_model_neglecting_conduction_consistency():
     """Check that left hand side is equal to right hand side of TwoEquationMeltModelNeglectingConduction()"""
@@ -33,11 +36,8 @@ def test_two_equation_melt_model_neglecting_conduction_consistency():
     left_hand_side = model.latent_heat_release(U, T, S, p)
     right_hand_side = model.ocean_heat_flux(U, T, S, p)
 
-    np.testing.assert_allclose(
-        left_hand_side,
-        right_hand_side,
-        atol=1e-12
-    )
+    np.testing.assert_allclose(left_hand_side, right_hand_side, atol=1e-12)
+
 
 def test_two_equation_melt_model_consistency():
     """Check that left hand side is equal to right hand side of TwoEquationMeltModel()"""
@@ -52,13 +52,12 @@ def test_two_equation_melt_model_consistency():
 
     # Compute left and right hand sides of heat conservation equation.
     left_hand_side = model.latent_heat_release(U, T, S, p)
-    right_hand_side = model.ocean_heat_flux(U, T, S, p) + model.ice_heat_flux(U, T, S, p)
-
-    np.testing.assert_allclose(
-        left_hand_side,
-        right_hand_side,
-        atol=1e-12
+    right_hand_side = model.ocean_heat_flux(U, T, S, p) + model.ice_heat_flux(
+        U, T, S, p
     )
+
+    np.testing.assert_allclose(left_hand_side, right_hand_side, atol=1e-12)
+
 
 def test_three_equation_melt_model_neglecting_conduction_consistency():
     """Check that left hand side is equal to right hand side of ThreeEquationMeltModelNeglectingConduction()"""
@@ -75,21 +74,14 @@ def test_three_equation_melt_model_neglecting_conduction_consistency():
     left_hand_side_heat = model.latent_heat_release(U, T, S, p)
     right_hand_side_heat = model.ocean_heat_flux(U, T, S, p)
 
-    np.testing.assert_allclose(
-        left_hand_side_heat,
-        right_hand_side_heat,
-        atol=1e-12
-    )
+    np.testing.assert_allclose(left_hand_side_heat, right_hand_side_heat, atol=1e-12)
 
     # Compute left and right hand sides of salt conservation equation.
     left_hand_side_salt = model.ice_salt_flux(U, T, S, p)
     right_hand_side_salt = model.ocean_salt_flux(U, T, S, p)
 
-    np.testing.assert_allclose(
-        left_hand_side_salt,
-        right_hand_side_salt,
-        atol=1e-12
-    )
+    np.testing.assert_allclose(left_hand_side_salt, right_hand_side_salt, atol=1e-12)
+
 
 def test_three_equation_melt_model_consistency():
     """Check that left hand side is equal to right hand side of ThreeEquationMeltModel()"""
@@ -104,20 +96,14 @@ def test_three_equation_melt_model_consistency():
 
     # Compute left and right hand sides of heat conservation equation.
     left_hand_side_heat = model.latent_heat_release(U, T, S, p)
-    right_hand_side_heat = model.ocean_heat_flux(U, T, S, p) + model.ice_heat_flux(U, T, S, p)
-
-    np.testing.assert_allclose(
-        left_hand_side_heat,
-        right_hand_side_heat,
-        atol=1e-12
+    right_hand_side_heat = model.ocean_heat_flux(U, T, S, p) + model.ice_heat_flux(
+        U, T, S, p
     )
+
+    np.testing.assert_allclose(left_hand_side_heat, right_hand_side_heat, atol=1e-12)
 
     # Compute left and right hand sides of salt conservation equation.
     left_hand_side_salt = model.ice_salt_flux(U, T, S, p)
     right_hand_side_salt = model.ocean_salt_flux(U, T, S, p)
 
-    np.testing.assert_allclose(
-        left_hand_side_salt,
-        right_hand_side_salt,
-        atol=1e-12
-    )
+    np.testing.assert_allclose(left_hand_side_salt, right_hand_side_salt, atol=1e-12)
